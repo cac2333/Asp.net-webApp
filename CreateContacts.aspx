@@ -5,7 +5,7 @@
         <div class="group">
             <p />
         </div>
-
+        
         <div class="group">
              <h2> Add a New Contact</h2>
             <asp:Literal runat="server" ID="errorMsg" />
@@ -108,5 +108,5 @@
                 <asp:Literal ID="Msg" runat="server" />
             </div>
         </div>
-                    </div>
+                   
     </asp:Content>

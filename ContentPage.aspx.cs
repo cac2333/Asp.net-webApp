@@ -7,6 +7,7 @@ using System.Web.UI.WebControls;
 using System.Data.SqlClient;
 using System.Data;
 using System.Web.Security;
+using System.Text;
 
 namespace trial
 {
@@ -109,9 +110,9 @@ namespace trial
         }
 
 
-        protected void Company_DataBind(DropDownList ddlCompanies)
+        protected void ddl_DataBind(DropDownList ddl, string cmdString, string textField, string valueField)
         {
-            SqlCommand cmd = new SqlCommand("SELECT Company_ID, Company_Name From Company ORDER BY Company_Name", conn);
+            SqlCommand cmd = new SqlCommand(cmdString, conn);
 
             try
             {
@@ -121,10 +122,10 @@ namespace trial
                 adapter.Fill(dataset);
                 if (dataset.Tables[0].Rows.Count > 0)
                 {
-                    ddlCompanies.DataSource = dataset.Tables[0];
-                    ddlCompanies.DataTextField = "Company_Name";
-                    ddlCompanies.DataValueField = "Company_ID";
-                    ddlCompanies.DataBind();
+                    ddl.DataSource = dataset.Tables[0];
+                    ddl.DataTextField = textField;
+                    ddl.DataValueField = valueField;
+                    ddl.DataBind();
                 }
             }
             catch (Exception e)
@@ -186,18 +187,20 @@ namespace trial
 
         protected void GridView1_RowEditing_temp(object sender, GridViewEditEventArgs e)
         {
-            GridView1.EditIndex = e.NewEditIndex;
+            //GridView1.EditIndex = e.NewEditIndex;
 
-            id = Convert.ToInt32(GridView1.DataKeys[e.NewEditIndex].Value);
+            //id = Convert.ToInt32(GridView1.DataKeys[e.NewEditIndex].Value);
 
-            //GridView gv_address = (GridView)GridView1.Rows[e.NewEditIndex].FindControl("gvAddress");
-            //GridView gv_others = (GridView)GridView1.Rows[e.NewEditIndex].FindControl("gvOthers");
+            ////GridView gv_address = (GridView)GridView1.Rows[e.NewEditIndex].FindControl("gvAddress");
+            ////GridView gv_others = (GridView)GridView1.Rows[e.NewEditIndex].FindControl("gvOthers");
 
-            //GvAddress_RowEditing(gv_address, e);
-            //GvOthers_RowEditing(gv_others, e);
+            ////GvAddress_RowEditing(gv_address, e);
+            ////GvOthers_RowEditing(gv_others, e);
 
-            GridView1.DataSource = GetTable("dbo.DisplayContacts");
-            GridView1.DataBind();
+            //GridView1.DataSource = GetTable("dbo.DisplayContacts");
+            //GridView1.DataBind();
+
+            mpe.Show();
 
             //DropDownList ddlCompanies = (DropDownList)GridView1.Rows[e.NewEditIndex].FindControl("ddlCompanies");
             //Company_DataBind(ddlCompanies);
@@ -407,31 +410,14 @@ namespace trial
         protected void ddlCountry_SelectedIndexChanged(object sender, EventArgs e)
         {
 
-            DropDownList ddlCountry = (DropDownList)sender;
-            GridViewRow row = (GridViewRow)ddlCountry.Parent.Parent;
-            GridView gvAddress = (GridView)row.Parent.Parent;
-            gvAddressUniqueID = gvAddress.UniqueID;
-            gvAddressEditIndex = row.RowIndex;
-            //RegularExpressionValidator revPost = (RegularExpressionValidator)row.FindControl("revPost");
             selectedCountry = ddlCountry.SelectedValue;
-                //GridView1.DataSource = GetTable("dbo.DisplayContacts");
-                //GridView1.DataBind();
-                //State_DataBind(country, row);
-
-            //if (country == "Canada")
-            //{
-            //    //not in xml so use \\
-            //    revPost.ValidationExpression = "[ABCEGHJKLMNPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z][ ]?\\d[ABCEGHJ-NPRSTV-Z]\\d";
-            //}
-            //else if (country == "USA")
-            //{
-            //    revPost.ValidationExpression = "\\d{5}([ \\-]\\d{4})?";
-            //}
+            string cmd = string.Format("SELECT name FROM state WHERE country=\'{0}\'", selectedCountry);
+            ddl_DataBind(ddlProvince, cmd, "name", "name");
         }
 
-        protected void State_DataBind(string country, GridViewRow row)
+        protected void State_DataBind(string country, GridViewRow row=null)
         {
-            DropDownList ddlStates = (DropDownList)row.FindControl("ddlProvince");
+            DropDownList ddlStates = (DropDownList)ddlProvince;
             string procedure = "dbo.Display_States";
 
             SqlCommand cmd = new SqlCommand(procedure, conn)
@@ -483,7 +469,7 @@ namespace trial
         protected void gvOthers_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             GridView gvOthers = ((System.Web.UI.WebControls.GridView)sender);
-            int index = ((GridViewRow)gvOthers.Parent.Parent).RowIndex;
+            int index = ((GridViewRow)gvOthers.Parent.Parent.Parent.Parent).RowIndex;
             int id = Convert.ToInt32(GridView1.DataKeys[index].Value);
             string procedure = "dbo.AddCustomizedInfo";
 
@@ -532,6 +518,221 @@ namespace trial
                     return false;
                 }
             
+        }
+
+        protected void btnShowEdit_Click(object sender, EventArgs e)
+        {
+            LinkButton btn = (LinkButton)sender;
+            GridViewRow row = ((GridViewRow)btn.Parent.Parent);
+
+            string cmd = "SELECT Company_ID, Company_Name From Company ORDER BY Company_Name";
+            ddl_DataBind(ddlCompany, cmd, "Company_Name", "Company_ID");
+
+            ddlCompany.SelectedIndex=  ddlCompany.Items.IndexOf(ddlCompany.Items.FindByText(row.Cells[1].Text));
+            txtEditFN.Text = row.Cells[2].Text;
+            txtEditLN.Text = row.Cells[3].Text;
+            txtEditEmail.Text = row.Cells[4].Text;
+            txtEditPhone.Text = row.Cells[5].Text;
+            hiddenContactID.Value = GridView1.DataKeys[row.RowIndex].Value.ToString();
+
+            DataTable dt=GetTable("DisplayContactAddress", Convert.ToInt32(hiddenContactID.Value));
+
+            hiddenAddressID.Value = dt.Rows[0].ItemArray[0].ToString();
+            txtEditLine1.Text = dt.Rows[0].ItemArray[1].ToString();
+            txtEditLine2.Text = dt.Rows[0].ItemArray[2].ToString();
+            txtEditCity.Text = dt.Rows[0].ItemArray[3].ToString();
+            ddlCountry.SelectedValue = dt.Rows[0].ItemArray[5].ToString();
+            ddlCountry_SelectedIndexChanged(ddlCountry, e);
+            ddlProvince.SelectedValue= dt.Rows[0].ItemArray[4].ToString();
+
+            mpe.Show();
+        }
+
+        protected void cbAddress_CheckedChanged(object sender, EventArgs e)
+        {
+            if (cbAddress.Checked == true)
+                AddressPanel.Visible = false;
+            else
+                AddressPanel.Visible = true;
+        }
+
+        protected void btnOkay_Click(object sender, EventArgs e)
+        {
+            mpe.Hide();
+            if (hiddenContactID.Value == null||hiddenContactID.Value=="")
+            {
+                AddContact();
+            }
+            else
+            {
+                UpdateContact();
+
+                if (cbAddress.Checked)
+                {
+                    ChangeToDefault();
+                }
+                else
+                {
+                    UpdateAddress();
+                }
+            }
+            
+            GridView1.DataSource = GetTable("dbo.DisplayContacts");
+            GridView1.DataBind();
+        }
+
+
+
+
+        #region Connect to database
+
+        private void AddContact()
+        {
+            string procedure = "dbo.Add_Contact";
+
+            //if user choose to use the default value, query the address id from the database
+            //else add a new address and return its id
+
+            int address_id = cbAddress.Checked ? 0 : InsertAddress();
+
+            SqlCommand cmd = new SqlCommand(procedure, conn)
+            {
+                CommandType = System.Data.CommandType.StoredProcedure
+            };
+            cmd.Parameters.Add(new SqlParameter("@company_id", ddlCompany.SelectedValue));
+            cmd.Parameters.Add(new SqlParameter("@username", Page.User.Identity.Name));
+            cmd.Parameters.Add(new SqlParameter("@address", address_id));
+            cmd.Parameters.Add(new SqlParameter("@phone", txtEditPhone.Text));
+            cmd.Parameters.Add(new SqlParameter("@first_name", txtEditFN.Text));
+            cmd.Parameters.Add(new SqlParameter("@last_name", txtEditLN.Text));
+            cmd.Parameters.Add(new SqlParameter("@ip", Request.UserHostAddress));
+            cmd.Parameters.Add(new SqlParameter("@email", txtEditEmail.Text));
+            cmd.Parameters.Add(new SqlParameter("@title", "Mr."));
+            Update(cmd);
+
+            PopupScript("This contact has been added successfully.");
+        }
+
+        private void UpdateContact() {
+
+            string procedure = "dbo.UpdateContact";
+            SqlCommand cmd = new SqlCommand(procedure, conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd.Parameters.Add(new SqlParameter("@contact_id", Convert.ToInt32(hiddenContactID.Value)));
+            cmd.Parameters.Add(new SqlParameter("@company", ddlCompany.SelectedValue));
+            cmd.Parameters.Add(new SqlParameter("@user", Page.User.Identity.Name));
+            cmd.Parameters.Add(new SqlParameter("@phone", txtEditPhone.Text));
+            cmd.Parameters.Add(new SqlParameter("@first_name", txtEditFN.Text));
+            cmd.Parameters.Add(new SqlParameter("@last_name", txtEditLN.Text));
+            cmd.Parameters.Add(new SqlParameter("@ip", Request.UserHostAddress));
+            cmd.Parameters.Add(new SqlParameter("@email", txtEditEmail.Text));
+            Update(cmd);
+        }
+
+        private void ChangeToDefault()
+        {
+            string procedure = "dbo.ChangeToDefaultAddress";
+            SqlCommand cmd = new SqlCommand(procedure, conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            cmd.Parameters.Add(new SqlParameter("@contact_id", Convert.ToInt32(hiddenContactID.Value)));
+            cmd.Parameters.Add(new SqlParameter("@company_id", ddlCompany.SelectedValue));
+            Update(cmd);
+        }
+
+        private void UpdateAddress()
+        {
+            string procedure = "dbo.UpdateAddress";
+            SqlCommand cmd = new SqlCommand(procedure, conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            cmd.Parameters.Add(new SqlParameter("@contact_id", Convert.ToInt32(hiddenContactID.Value)));
+            cmd.Parameters.Add(new SqlParameter("@address_id",Convert.ToInt32(hiddenAddressID.Value)));
+            cmd.Parameters.Add(new SqlParameter("@address1", txtEditLine1.Text));
+            cmd.Parameters.Add(new SqlParameter("@address2", txtEditLine2.Text));
+            cmd.Parameters.Add(new SqlParameter("@city", txtEditCity.Text));
+            cmd.Parameters.Add(new SqlParameter("@province", ddlProvince.SelectedValue));
+            cmd.Parameters.Add(new SqlParameter("@country", ddlCountry.SelectedValue));
+            cmd.Parameters.Add(new SqlParameter("@postal", txtEditPost.Text));
+            cmd.Parameters.Add(new SqlParameter("@update_by", Session["Username"]));
+            cmd.Parameters.Add(new SqlParameter("@update_ip", Request.UserHostAddress));
+            Update(cmd);
+        }
+
+        private int InsertAddress()
+        {
+            string procedure = "dbo.Add_Address";
+            SqlDataReader rdr = null;
+
+            SqlCommand cmd = new SqlCommand(procedure, conn)
+            {
+                CommandType = System.Data.CommandType.StoredProcedure
+            };
+            cmd.Parameters.Add(new SqlParameter("@line1", txtEditLine1.Text));
+            cmd.Parameters.Add(new SqlParameter("@line2", txtEditLine2.Text));
+            cmd.Parameters.Add(new SqlParameter("@city", txtEditCity.Text));
+            cmd.Parameters.Add(new SqlParameter("@state", ddlProvince.SelectedValue));
+            cmd.Parameters.Add(new SqlParameter("@country", ddlCountry.SelectedValue));
+            cmd.Parameters.Add(new SqlParameter("@postalCode", txtEditPost.Text));
+            cmd.Parameters.Add(new SqlParameter("@username", Page.User.Identity.Name));
+
+            try
+            {
+                conn.Open();
+                rdr = cmd.ExecuteReader();
+
+                if (rdr.Read())
+                {
+                    //  id = (int)rdr.GetInt32(0);
+                    var id = rdr.GetValue(0);
+                    return Convert.ToInt32(id);
+                }
+            }
+            catch (Exception e)
+            {
+            }
+            finally
+            {
+                conn.Close();
+            }
+            return -1;
+        }
+
+            #endregion
+
+            protected void btnAdd_Click(object sender, EventArgs e)
+           {
+            string cmd = "SELECT Company_ID, Company_Name From Company ORDER BY Company_Name";
+            ddl_DataBind(ddlCompany, cmd, "Company_Name", "Company_ID");
+            ddlCompany.ClearSelection();
+            txtEditFN.Text = "";
+            txtEditLN.Text = "";
+            txtEditEmail.Text = "";
+            txtEditPhone.Text = "";
+            hiddenContactID.Value = null;
+
+            txtEditLine1.Text = "";
+            txtEditLine2.Text = "";
+            txtEditCity.Text ="";
+            ddlCountry.ClearSelection();
+            State_DataBind(ddlCountry.SelectedValue.ToString());
+            ddlProvince.ClearSelection();
+
+            mpe.Show();
+        }
+
+        private void PopupScript(string msg)
+        {
+            string script = "window.onload = function(){ alert('";
+            script += msg;
+            script += "');";
+            // string script = string.Format("window.onload=function(){ alter(\' {0} \'); window.location=\'{1}\';}", msg, url);
+            ClientScript.RegisterStartupScript(this.GetType(), "Redirect", script, true);
         }
     }
 }
