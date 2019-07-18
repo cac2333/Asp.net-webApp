@@ -5,7 +5,15 @@
 
 <asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
 
+	<link rel="stylesheet" type="text/css" href="Table_Fixed_Column/css/util.css">
+	<link rel="stylesheet" type="text/css" href="Table_Fixed_Column/css/main.css">
+<!--===============================================================================================-->
      <link href="css/tableStyle.css" rel="stylesheet" type="text/css" />
+                                
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.10.0.min.js" type="text/javascript"></script>
+    <script src="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.9.2/jquery-ui.min.js" type="text/javascript"></script>
+    <link href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.9.2/themes/blitzer/jquery-ui.css"
+    rel="Stylesheet" type="text/css" />
     <script>
             function expandcollapse(obj, row) {
                 var div = document.getElementById(obj);
@@ -35,32 +43,87 @@
 
     </script>
 
-    <script type="text/javascript">
-        function showEditPanel() {
-            var mpe = $find('mpeEdit');
-            mpe.show();
-        }
-    </script>
+<script type="text/javascript">
+    $(function () {
+        $("#<%=searchBox.ClientID%>").autocomplete({
+            source: function (request, response) {
+                $.ajax({
+                    url: '<%=ResolveUrl("~/ContentPage.aspx/GetCompanies") %>',
+                    data: "{ 'prefix': '" + request.term + "'}",
+                    dataType: "json",
+                    type: "POST",
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        response($.map(data.d, function (item) {
+                            return {
+                                label: item.split('-')[0],
+                                val: item.split('-')[1]
+                            }
+                        }))
+                    },
+                    error: function (response) {
+                        var r = jQuery.parseJSON(response.responseText);
+                        alert("Message: " + r.Message);
+                        alert("StackTrace: " + r.StackTrace);
+                        alert("ExceptionType: " + r.ExceptionType);
+                    },
+                    failure: function (response) {
+                        var r = jQuery.parseJSON(response.responseText);
+                        alert("Message: " + r.Message);
+                        alert("StackTrace: " + r.StackTrace);
+                        alert("ExceptionType: " + r.ExceptionType);
+                    }
+                });
+            },
+            select: function (e, i) {
+                $("[id$=hfCompanyID]").val(i.item.val);
+            },
+            minLength: 1
+        });
+    });  
+</script>
 
 
 
     <div class="group">
-    <p />
+
     </div>
 
- 
     <div class="group">
-          <asp:TextBox runat="server"/>
-          <button type="submit" class="btn btn-default" style="width:20%">Submit</button>
-    </div>
+  <nav class="floating-menu float-left-20" >
+    <h3>Contacts</h3>
+    <p class="menu-active">View Your Contact</p>
+    <a href="CreateContacts.aspx">Add a new Contact</a>
+    <a href="CompanyList.aspx">Explore More</a>
+  </nav>
 
-         
-    <div class="container">
 
+    <div class="right-80">
+        <div class="div-head">
+            <h3>View your Contacts</h3>
+        </div>
+        <div class="div-search">
+        <asp:TextBox runat="server" ID="searchBox" placeholder="Search"/>
+        <asp:HiddenField runat="server" ID="hfCompanyID" />
+        <asp:Button runat="server" ID="btnSearch" Text="Search" OnClick="btnSearch_Click" css="btn-style"/>
+       </div>  
+
+    <div class="group">
+        
+
+        <asp:Panel runat="server" ID="emptyRecord" Visible="false" CssClass="div-head">
+            <h4>No matching record is found</h4>
+            <br />
+            <asp:LinkButton Text="Return" runat="server" ID="btn_return" OnClick="btn_return_Click"/>
+        </asp:Panel>
+
+<%--      <asp:updatepanel runat="server" id="UpdatePanel1" UpdateMode="Conditional" >
+          <ContentTemplate>--%>
         <asp:GridView ID="GridView1" runat="server" DataKeyNames="contact_id"
-            AutoGenerateColumns="False" OnRowDataBound="GridView1_RowDataBound" CssClass="mGrid" 
+            AutoGenerateColumns="False" OnRowDataBound="GridView1_RowDataBound" CssClass="table100 ver1" OnSorting="GridView1_Sorting" AllowSorting="true"
             OnRowDeleting="GridView1_RowDeleting" OnRowEditing="GridView1_RowEditing_temp" OnRowCancelingEdit="GridView1_RowCancelingEdit" OnRowUpdating="GridView1_RowUpdating" CellPadding="4" ForeColor="#333333" GridLines="None" >
             <AlternatingRowStyle BackColor="White" ForeColor="#284775" />
+            <HeaderStyle CssClass="table-header" />
             <Columns>
                  <asp:TemplateField ItemStyle-Width="20px">
 					<ItemTemplate>
@@ -71,10 +134,10 @@
 
 <ItemStyle Width="20px"></ItemStyle>
                     </asp:TemplateField>
-                <asp:BoundField DataField="company_name" HeaderText="Company" ReadOnly="True" SortExpression="company_name" />
+                <asp:BoundField DataField="company_name" HeaderText="Company" ReadOnly="True" SortExpression="company_name"/>
                 <asp:BoundField DataField="first_name" HeaderText="First Name" SortExpression="first_name"/>
                 <asp:BoundField DataField="last_name" HeaderText="Last Name" SortExpression="last_name" />
-                <asp:BoundField DataField="email" HeaderText="Email" />
+                <asp:BoundField DataField="email" HeaderText="Email" SortExpression="email"/>
                 <asp:BoundField DataField="phone" HeaderText="Phone" SortExpression="phone" />
                  <asp:BoundField DataField="contact_id" HeaderText="contact_id" InsertVisible="False" ReadOnly="True" SortExpression="contact_id" Visible="False" />
                 <asp:TemplateField ShowHeader="false">
@@ -88,7 +151,7 @@
 
                                    <ContentTemplate>--%>
 
-                                  <asp:LinkButton runat="server" Text="Edit" ID="lbtnShowEdit" OnClick="btnShowEdit_Click"/>
+                                  <asp:LinkButton ForeColor="Gray" runat="server" Text="Edit" ID="lbtnShowEdit" OnClick="btnShowEdit_Click"/>
     <%--                              
                                   </ContentTemplate>
 
@@ -96,8 +159,12 @@
 
                    </ItemTemplate>
                </asp:TemplateField>
-                 <asp:CommandField ShowDeleteButton="true" />
-
+                 <asp:CommandField ShowDeleteButton="true" ControlStyle-ForeColor="Gray"/>
+                <asp:TemplateField>
+                    <ItemTemplate>
+                        <asp:LinkButton runat="server" Text="View details" ID="lbtnViewDetail" OnClick="lbtnViewDetail_Click" />
+                    </ItemTemplate>
+                </asp:TemplateField>
                  <asp:TemplateField>
                     <ItemTemplate>
                         <tr>
@@ -127,49 +194,7 @@
                             <div style="padding: 5px;">
                                 <asp:UpdatePanel runat="server" UpdateMode="Conditional">
                                     <ContentTemplate>
-                                <asp:GridView ID="gvOthers" runat="server" AutoGenerateColumns="false"
-								DataKeyNames="field_id" CssClass="rtable" ShowFooter="true"  ShowHeader="true"
-                                    OnRowDataBound="gvOthers_RowDataBound" OnRowCommand="gvOthers_RowCommand" OnRowDeleting="gvOthers_RowDeleting">
-                                    <columns> 
-                                        <asp:TemplateField>
-                                            <ItemTemplate>
-                                                <asp:Label Text=<%# Eval("field_id") %> runat="server" Visible="false"/>
-                                            </ItemTemplate>
-                                             <FooterTemplate>
-                                                <asp:Label runat="server" Visible="false" />
-                                            </FooterTemplate>
-                                        </asp:TemplateField>
-                                        <asp:BoundField  />
-                                        <asp:TemplateField HeaderText="Customized field">
-                                           <ItemTemplate>
-                                               <asp:label Text=<%# Eval("field_name") %> runat="server" />
-                                           </ItemTemplate>
-                                            <FooterTemplate>
-                                                <asp:TextBox ID="footerName" placeholder="New filed name" BackColor="White" ForeColor="Gray" runat="server" MaxLength="250" BorderWidth="1px"/>
-                                            </FooterTemplate>
-                                       </asp:TemplateField>
-                                        
-                                        <asp:TemplateField HeaderText="field value">
-                                            <ItemTemplate>
-                                               <asp:label Text=<%# Eval("field_value") %> runat="server" />
-                                           </ItemTemplate>
-    
-                                            <FooterTemplate>
-                                                <asp:TextBox ID="footerValue" placeholder="New field value" runat="server" MaxLength="250" BackColor="White" ForeColor="Gray" BorderWidth="1px"/>
-                                            </FooterTemplate>
-                                       </asp:TemplateField>
-                                    <asp:TemplateField ShowHeader="false">
-                                        <ItemTemplate>
-                                            <asp:LinkButton ID="deleteBtn" CommandName="Delete" runat="server">Delete</asp:LinkButton>
-                                        </ItemTemplate>
-                                            <FooterTemplate>
-                                                <asp:LinkButton ID="addBtn" CommandName="Add" runat="server">Add</asp:LinkButton>
-                                            </FooterTemplate>
-                                       </asp:TemplateField>
-                                    <%--    <asp:CommandField ShowDeleteButton="true" />--%>
-                                    </columns>
-                                    
-                                </asp:GridView>
+
                                         </ContentTemplate>
                              </asp:UpdatePanel>
 
@@ -183,7 +208,6 @@
             </Columns>
             <EditRowStyle BackColor="#999999" />
             <FooterStyle BackColor="#5D7B9D" Font-Bold="True" ForeColor="White" />
-            <HeaderStyle BackColor="#5D7B9D" Font-Bold="True" ForeColor="White" />
             <PagerStyle BackColor="#284775" ForeColor="White" HorizontalAlign="Center" />
             <RowStyle BackColor="#F7F6F3" ForeColor="#333333" />
             <SelectedRowStyle BackColor="#E2DED6" Font-Bold="True" ForeColor="#333333" />
@@ -191,7 +215,9 @@
             <SortedAscendingHeaderStyle BackColor="#506C8C" />
             <SortedDescendingCellStyle BackColor="#FFFDF8" />
             <SortedDescendingHeaderStyle BackColor="#6F8DAE" />
-        </asp:GridView>
+               </asp:GridView>
+<%--              </ContentTemplate>
+          </asp:updatepanel>--%>
 
      
         </div>
@@ -200,7 +226,7 @@
 
     <asp:Panel ID="EditPanel" runat="server" CssClass="form-style-9" style="display:none;">
                <h2>Edit Contact</h2>
-           <div>
+   <div>
            <ul>
                <li>
                 <asp:HiddenField  runat="server" ID="hiddenContactID"/>
@@ -210,7 +236,7 @@
           
                <li>  <label class="field-style field-split align-left">
                    <span>First name: </span>
-                 <asp:TextBox ID="txtEditFN" runat="server"  />
+                 <asp:TextBox ID="txtEditFN" runat="server"  ForeColor="Black"/>
                    </label>
                    <label class="field-style field-split align-right">Last name: 
                  <asp:TextBox ID="txtEditLN" runat="server"/>
@@ -228,7 +254,7 @@
                    <asp:RegularExpressionValidator display="Dynamic" id="revEmail" runat="server" ControlToValidate="txtEditEmail"  ErrorMessage="*" ForeColor="Red" ValidationExpression="^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$"/>    
                </li>
         </ul>
-    </div>
+       </div>
     <div>
         
    <asp:updatepanel runat="server" id="UpdatePanel" UpdateMode="Conditional" >
@@ -240,9 +266,11 @@
          
             <ul>
                 <asp:HiddenField id="hiddenAddressID" runat="server" />
-               <li>
+             
+                
+              <li>
                      <label class="field-style field-split align-left">Line 1
-                 <asp:TextBox ID="txtEditLine1" runat="server" /> </label>
+                 <asp:TextBox ID="txtEditLine1" runat="server" ForeColor="Black" /> </label>
 
                     <label class="field-style field-split align-right">Line 2
                  <asp:TextBox ID="txtEditLine2" runat="server" /> </label>
@@ -278,8 +306,8 @@
 
           </div>       
         <div class="right-bottom">
-                   <asp:LinkButton Font-Size="Large" ForeColor="Gray" ID="btnOkay" runat="server" Text="Okay" OnClick="btnOkay_Click" />
-                   <asp:LinkButton ID="btnCancel" runat="server" class="btn-link" Text="Cancel" Font-Size="Large" ForeColor="Gray"/>
+                   <asp:LinkButton ID="btnOkay" runat="server" Text="Okay" CssClass="btn-link" OnClick="btnOkay_Click" />
+                   <asp:LinkButton ID="btnCancel" runat="server" CssClass="btn-link" Text="Cancel"/>
 		</div>
     </asp:Panel>
 
@@ -296,5 +324,9 @@
 
     <div class="group"/>
     <asp:SqlDataSource ID="CompanyDataSource" runat="server" ConnectionString="<%$ ConnectionStrings:MyDBConnectionString %>" SelectCommand="SELECT [Company_ID], [Company_Name] FROM [Company]"></asp:SqlDataSource>
-   
+
+  </div>
+    </div>
+ </div>
+
 </asp:Content>

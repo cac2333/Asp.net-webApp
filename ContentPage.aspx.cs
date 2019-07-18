@@ -8,6 +8,7 @@ using System.Data.SqlClient;
 using System.Data;
 using System.Web.Security;
 using System.Text;
+using System.Web.Services;
 
 namespace trial
 {
@@ -21,9 +22,9 @@ namespace trial
         string gvOthersUniqueID = string.Empty;
         int gvOthersEditIndex = -1;
         string selectedCountry;
-        int id;
+        int company_id=-1;
         static string connString = System.Web.Configuration.WebConfigurationManager.ConnectionStrings["LocalSqlServer"].ConnectionString;
-        SqlConnection conn = new SqlConnection(connString);
+        static SqlConnection conn = new SqlConnection(connString);
 
         #endregion
 
@@ -33,13 +34,23 @@ namespace trial
                 Response.Redirect("LoginPage.aspx");
 
             Session["Username"] = Page.User.Identity.Name;
-            Session["SelectedCompany"] = null;
-            Session["SelectedCountry"] = null;;
 
             if (!IsPostBack)
             {
-                GridView1.DataSource = GetTable("dbo.DisplayContacts");
-                GridView1.DataBind();
+                if (Request.QueryString["id"] != null && Request.QueryString["id"] != "")
+                    company_id = Convert.ToInt32(Request.QueryString["id"]);
+
+                DataTable dt = GetTable("dbo.DisplayContacts", 0, company_id);
+                GridView1.DataSource = dt;
+
+                if (dt.Rows.Count== 0)
+                {
+                    EmptyRecord();
+                }
+                else
+                {
+                    GridView1.DataBind();
+                }
             }
 
         }
@@ -53,7 +64,13 @@ namespace trial
 
         #region Helper functions for databind
 
-        private DataTable GetTable(string procedure, int key = 0)
+        private void EmptyRecord()
+        {
+            GridView1.Visible = false;
+            emptyRecord.Visible = true;
+        }
+
+        private DataTable GetTable(string procedure, int key = 0, int company_id=-1, string sort="company_name")
         {
             DataTable dt = new DataTable("Default_Contacts");
             SqlCommand cmd = new SqlCommand(procedure, conn)
@@ -62,7 +79,11 @@ namespace trial
             };
 
             if (procedure == "dbo.DisplayContacts")
+            {
                 cmd.Parameters.Add(new SqlParameter("@username", Session["Username"]));
+                cmd.Parameters.Add(new SqlParameter("@company_id", company_id));
+                cmd.Parameters.Add(new SqlParameter("@sort_expression", sort));
+            }
             else
             {
                 cmd.Parameters.Add(new SqlParameter("@contact_id", key));
@@ -148,15 +169,13 @@ namespace trial
             {
                
                 int contact_id = Convert.ToInt32(GridView1.DataKeys[e.Row.RowIndex].Value);
-                DropDownList ddlCompanies = (DropDownList)e.Row.FindControl("ddlCompanies");
 
                 GridView gvAddress = (GridView)e.Row.FindControl("gvAddress");
                 GridView gvOthers = (GridView)e.Row.FindControl("gvOthers");
 
-                if (gvAddress.UniqueID == gvAddressUniqueID ||gvOthers.UniqueID==gvOthersUniqueID)
+                if (gvAddress.UniqueID == gvAddressUniqueID )
                 {
                     gvAddress.EditIndex = gvAddressEditIndex;
-                    gvOthers.EditIndex = gvOthersEditIndex;
                     //expand the child grid
                     ClientScript.RegisterStartupScript(GetType(), "Expand", "<SCRIPT LANGUAGE='javascript'>expandcollapse('div" + ((DataRowView)e.Row.DataItem)["contact_id"].ToString() + "');</script>");
                 }
@@ -164,21 +183,21 @@ namespace trial
                     gvAddress.DataSource = GetTable("dbo.DisplayContactAddress", contact_id);
                     gvAddress.DataBind();
 
-                    gvOthers.DataSource = GetTable("dbo.Display_Customized_Contact", contact_id);
-                    gvOthers.DataBind();
+                    //gvOthers.DataSource = GetTable("dbo.Display_Customized_Contact", contact_id);
+                    //gvOthers.DataBind();
             }
         }
 
 
-        protected void gvOthers_RowDataBound(object sender, GridViewRowEventArgs e)
-        {
-            e.Row.Cells[0].Visible = false;
-            if (e.Row.RowIndex==0 )
-            {
-                e.Row.Visible = false;
-            }
+        //protected void gvOthers_RowDataBound(object sender, GridViewRowEventArgs e)
+        //{
+        //    e.Row.Cells[0].Visible = false;
+        //    if (e.Row.RowIndex==0 )
+        //    {
+        //        e.Row.Visible = false;
+        //    }
   
-        }
+        //}
         #endregion
 
         #region Row edit
@@ -187,18 +206,6 @@ namespace trial
 
         protected void GridView1_RowEditing_temp(object sender, GridViewEditEventArgs e)
         {
-            //GridView1.EditIndex = e.NewEditIndex;
-
-            //id = Convert.ToInt32(GridView1.DataKeys[e.NewEditIndex].Value);
-
-            ////GridView gv_address = (GridView)GridView1.Rows[e.NewEditIndex].FindControl("gvAddress");
-            ////GridView gv_others = (GridView)GridView1.Rows[e.NewEditIndex].FindControl("gvOthers");
-
-            ////GvAddress_RowEditing(gv_address, e);
-            ////GvOthers_RowEditing(gv_others, e);
-
-            //GridView1.DataSource = GetTable("dbo.DisplayContacts");
-            //GridView1.DataBind();
 
             mpe.Show();
 
@@ -214,32 +221,7 @@ namespace trial
             gvAddressEditIndex = e.NewEditIndex;
             GridView1.DataSource = GetTable("dbo.DisplayContacts");
             GridView1.DataBind();
-            //GridView gvAddress = ((System.Web.UI.WebControls.GridView)sender);
-            //gvAddress.EditIndex = e.NewEditIndex;
-            //int index = ((GridViewRow)gvAddress.Parent.Parent).RowIndex;
-            //int id = Convert.ToInt32(GridView1.DataKeys[index].Value);
-
-            //string[] field = { "address1", "address2", "City" };
-            //int size = field.Length;
-            //Panel[] panels = new Panel[size];
-            //Label[] labels = new Label[size];
-            //TextBox[] txt = new TextBox[size];
-
-            //for (int j = 0; j < size; j++)
-            //{
-            //    int temp = j + 1;
-            //    DataTable dt = GetTable("dbo.DisplayContactAddress", id);
-            //    panels[j] = (Panel)gvAddress.Rows[0].FindControl("Panel" + temp);
-            //    labels[j] = (Label)gvAddress.Rows[0].FindControl("Label" + temp);
-            //    txt[j] = (TextBox)gvAddress.Rows[0].FindControl("txtAddr" + temp);
-            //    labels[j].Visible = false;
-            //    txt[j].Text = dt.Rows[0][field[j]].ToString();
-            //    panels[j].Visible = true;
-            //    panels[j].Controls.Add(txt[j]);
-            //    txt[j].Visible = true;
-            //}
-            //gvAddress.DataSource = GetTable("dbo.DisplayContactAddress", id);
-            //gvAddress.DataBind();
+           
         }
 
         #endregion
@@ -359,23 +341,23 @@ namespace trial
             GridView1.DataBind();
         }
 
-        protected void gvOthers_RowDeleting(object sender, GridViewDeleteEventArgs e)
-        {
-            GridView gvOthers = (GridView)sender;
-            int field_id = Convert.ToInt32(gvOthers.DataKeys[e.RowIndex].Value);
-            string procedure = "dbo.DeleteCustomizedContact";
+        //protected void gvOthers_RowDeleting(object sender, GridViewDeleteEventArgs e)
+        //{
+        //    GridView gvOthers = (GridView)sender;
+        //    int field_id = Convert.ToInt32(gvOthers.DataKeys[e.RowIndex].Value);
+        //    string procedure = "dbo.DeleteCustomizedContact";
 
-            SqlCommand cmd = new SqlCommand(procedure, conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+        //    SqlCommand cmd = new SqlCommand(procedure, conn)
+        //    {
+        //        CommandType = CommandType.StoredProcedure
+        //    };
 
-            cmd.Parameters.Add(new SqlParameter("@field_id", field_id));
-            Update(cmd);
+        //    cmd.Parameters.Add(new SqlParameter("@field_id", field_id));
+        //    Update(cmd);
 
-            GridView1.DataSource = GetTable("dbo.DisplayContacts");
-            GridView1.DataBind();
-        }
+        //    GridView1.DataSource = GetTable("dbo.DisplayContacts");
+        //    GridView1.DataBind();
+        //}
 
         #endregion
 
@@ -703,9 +685,11 @@ namespace trial
             return -1;
         }
 
-            #endregion
+        #endregion
 
-            protected void btnAdd_Click(object sender, EventArgs e)
+
+        #region button_click
+        protected void btnAdd_Click(object sender, EventArgs e)
            {
             string cmd = "SELECT Company_ID, Company_Name From Company ORDER BY Company_Name";
             ddl_DataBind(ddlCompany, cmd, "Company_Name", "Company_ID");
@@ -716,9 +700,11 @@ namespace trial
             txtEditPhone.Text = "";
             hiddenContactID.Value = null;
 
+            cbAddress.Checked = true;
             txtEditLine1.Text = "";
             txtEditLine2.Text = "";
             txtEditCity.Text ="";
+            txtEditPost.Text = "";
             ddlCountry.ClearSelection();
             State_DataBind(ddlCountry.SelectedValue.ToString());
             ddlProvince.ClearSelection();
@@ -726,6 +712,18 @@ namespace trial
             mpe.Show();
         }
 
+        protected void lbtnViewDetail_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        protected void btnSearch_Click(object sender, EventArgs e)
+        {
+        //    string value = hfCompanyID.Value == "" ? "0" : hfCompanyID.Value;
+            Response.Redirect("ContentPage.aspx?id=" + hfCompanyID.Value);
+        }
+
+        #endregion
         private void PopupScript(string msg)
         {
             string script = "window.onload = function(){ alert('";
@@ -733,6 +731,51 @@ namespace trial
             script += "');";
             // string script = string.Format("window.onload=function(){ alter(\' {0} \'); window.location=\'{1}\';}", msg, url);
             ClientScript.RegisterStartupScript(this.GetType(), "Redirect", script, true);
+        }
+
+        protected void GridView1_Sorting(object sender, GridViewSortEventArgs e)
+        {
+
+            if (Request.QueryString["id"] != null && Request.QueryString["id"] != "")
+                company_id = Convert.ToInt32(Request.QueryString["id"]);
+
+            GridView1.DataSource = GetTable("dbo.DisplayContacts",0, company_id, e.SortExpression);
+            GridView1.DataBind();
+        }
+
+        [WebMethod]
+        public static string[] GetCompanies(string prefix)
+        {
+            List<string> companies = new List<string>();
+            String fetchCompany = "SELECT Company_Name, Company_ID FROM Company WHERE Company_Name LIKE @SearchText +'%'";
+            SqlCommand cmd = new SqlCommand(fetchCompany, conn);
+            cmd.Parameters.Add(new SqlParameter("@SearchText", prefix));
+
+            try
+            {
+                conn.Open();
+                SqlDataReader rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    companies.Add(string.Format("{0}-{1}", rdr["Company_Name"], rdr["Company_ID"]));
+
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            finally
+            {
+                cmd.Dispose();
+                conn.Close();
+            }
+            return companies.ToArray();
+        }
+
+        protected void btn_return_Click(object sender, EventArgs e)
+        {
+            Response.Redirect("ContentPage.aspx");
         }
     }
 }
